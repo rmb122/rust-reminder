@@ -112,7 +112,8 @@ impl Clone for ReminderEditDialog {
 
 impl ReminderEditDialog {
     pub fn new(title: &str, have_timepicker: bool) -> Self {
-        let dialog = gtk::Dialog::builder().height_request(150).type_hint(gtk::gdk::WindowTypeHint::Dialog)
+        let dialog = gtk::Dialog::builder().height_request(150).window_position(gtk::WindowPosition::Mouse)
+            .type_hint(gtk::gdk::WindowTypeHint::Dialog)
             .width_request(400).title(title).destroy_with_parent(true).build();
 
         let content_label = gtk::Label::builder().margin_start(3).label("<b>Content:</b>").use_markup(true).halign(gtk::Align::Start).build();
