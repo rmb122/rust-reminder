@@ -1,12 +1,11 @@
 use std::borrow::Borrow;
-use std::cell::{Ref, RefCell};
+use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::Rc;
-use std::str::FromStr;
 
 use chrono::{Datelike, DateTime, Local, Timelike, TimeZone};
-use gtk::{Application, Container, CssProvider, Dialog, StateFlags, TextBuffer, Widget};
 use gtk::prelude::*;
+use gtk::Widget;
 
 pub struct Timepicker {
     year_picker: gtk::SpinButton,
@@ -151,13 +150,13 @@ impl ReminderEditDialog {
         };
 
         let self_clone = dialog.clone();
-        cancel_button.connect_clicked(move |x| {
+        cancel_button.connect_clicked(move |_| {
             *self_clone.save_todo.deref().borrow_mut() = false;
             self_clone.dialog.hide();
         });
 
         let self_clone = dialog.clone();
-        save_button.connect_clicked(move |x| {
+        save_button.connect_clicked(move |_| {
             *self_clone.save_todo.deref().borrow_mut() = true;
             self_clone.dialog.hide();
         });

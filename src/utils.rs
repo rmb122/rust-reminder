@@ -1,9 +1,8 @@
 use chrono::{Local, TimeZone};
-use gtk::{gdk_pixbuf, glib, IconSize, pango};
-use gtk::glib::ffi::GString;
+use gtk::{gdk_pixbuf, IconSize, pango};
 use gtk::prelude::*;
 
-use crate::models::{NewTodo, Todo};
+use crate::models::Todo;
 
 pub fn get_icon_view(icon_list: &[&str]) -> Option<gtk::IconView> {
     let icon_view = gtk::IconView::builder().
@@ -54,7 +53,7 @@ pub fn get_todo_row_view(todo: &Todo) -> gtk::Grid {
     grid.attach(&label, 1, 0, 1, 1);
 
     if todo.expire_time.is_some() {
-        let label = get_border_label(&Local.from_utc_datetime(&todo.expire_time.unwrap()).format("%H:%M").to_string(), false);
+        let label = get_border_label(&Local.from_local_datetime(&todo.expire_time.unwrap()).unwrap().format("%H:%M").to_string(), false);
         grid.attach(&label, 2, 0, 1, 1);
     }
 

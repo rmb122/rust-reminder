@@ -1,16 +1,16 @@
-use std::borrow::{Borrow, BorrowMut};
-use std::cell::{Ref, RefCell};
+use std::borrow::Borrow;
+use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::Rc;
 
-use chrono::{Date, DateTime, Local, NaiveDate, TimeZone, Utc};
+use chrono::{Date, Datelike, Local, TimeZone};
 use diesel::SqliteConnection;
-use gtk::{Application, ApplicationWindow, gdk_pixbuf, glib, IconSize, IconView, ListBox, ListBoxRow};
+use gtk::{Application, Calendar, ListBox};
 use gtk::prelude::*;
 
-use crate::models::{db_del_todo, db_find_todo, db_new_todo, db_update_todo, establish_connection, NewTodo, Todo};
+use crate::models::{db_del_todo, db_find_todo, db_get_exists_day, db_new_todo, db_update_todo, establish_connection, NewTodo, Todo};
 use crate::reminder_edit_dialog::ReminderEditDialog;
-use crate::utils::{get_border_label, get_icon_view, get_todo_row_view};
+use crate::utils::{get_icon_view, get_todo_row_view};
 
 pub struct ResetDateButton {
     reset_date_btn: gtk::IconView,
@@ -42,6 +42,7 @@ impl ResetDateButton {
 
 pub struct Reminder {
     db_conn: Rc<SqliteConnection>,
+    calendar: Rc<gtk::Calendar>,
     todo_edit_panel_button: Vec<(&'static str, &'static dyn Fn(&Self))>,
     todo_msg_list: Rc<gtk::ListBox>,
     current_date: Rc<RefCell<Option<Date<Local>>>>,
@@ -52,6 +53,7 @@ impl Clone for Reminder {
     fn clone(&self) -> Self {
         return Reminder {
             db_conn: Rc::clone(&self.db_conn),
+            calendar: Rc::clone(&self.calendar),
             todo_edit_panel_button: self.todo_edit_panel_button.clone(),
             todo_msg_list: Rc::clone(&self.todo_msg_list),
             current_date: Rc::clone(&self.current_date),
@@ -64,6 +66,7 @@ impl Reminder {
     pub fn new() -> Reminder {
         return Reminder {
             db_conn: Rc::new(establish_connection(None)),
+            calendar: Rc::new(gtk::Calendar::new()),
             todo_edit_panel_button: vec![
                 ("list-add", &Reminder::todo_add_callback),
                 ("list-remove", &Reminder::todo_remove_callback),
@@ -92,7 +95,7 @@ impl Reminder {
                     Some(time) => {
                         NewTodo {
                             content: content,
-                            expire_time: Some(time.naive_utc()),
+                            expire_time: Some(time.naive_local()),
                         }
                     }
                     None => {
@@ -114,7 +117,6 @@ impl Reminder {
         self.todo_msg_list.selected_foreach(|_, r| unsafe {
             if let Some(todo) = r.child().unwrap().data::<Todo>("todo") {
                 todo_id.push(todo.as_ref().id);
-
             }
         });
 
@@ -144,7 +146,7 @@ impl Reminder {
 
         let todo_add_dialog = ReminderEditDialog::new("Edit todo", todo.expire_time.is_some());
         if let Some(time) = todo.expire_time {
-            todo_add_dialog.set_time(Local.from_utc_datetime(&time));
+            todo_add_dialog.set_time(Local.from_local_datetime(&time).unwrap());
         }
 
         todo_add_dialog.set_content(todo.content);
@@ -158,7 +160,7 @@ impl Reminder {
                         Todo {
                             id: todo.id,
                             content: content,
-                            expire_time: Some(time.naive_utc()),
+                            expire_time: Some(time.naive_local()),
                         }
                     }
                     None => {
@@ -194,7 +196,19 @@ impl Reminder {
             let todo = get_todo_row_view(todo);
             self.todo_msg_list.add(&todo);
         }
+
+        self.refresh_marked_day();
         self.todo_msg_list.show_all();
+    }
+
+    fn refresh_marked_day(&self) {
+        self.calendar.clear_marks();
+
+        let days = db_get_exists_day(self.db_conn.deref(), self.calendar.year(), self.calendar.month() + 1);
+
+        for d in days {
+            self.calendar.mark_day(d as u32);
+        }
     }
 
     fn reset_date(&self) {
@@ -234,7 +248,7 @@ impl Reminder {
             e.unselect_all();
         });
 
-        let calendar = gtk::Calendar::new();
+        let calendar: &Calendar = self.calendar.borrow();
         calendar.set_width_request(250);
 
         let self_clone = self.clone();
@@ -255,14 +269,25 @@ impl Reminder {
 
         let self_clone = self.clone();
         reset_date_icon_view.connect_selection_changed(move |e| {
-            self_clone.reset_date();
             e.unselect_all();
+            self_clone.reset_date();
             self_clone.reset_date_btn.hide();
             self_clone.todo_refresh();
         });
 
-        reset_date_label.set_margin_start(3);
+        let self_clone = self.clone();
+        let return_today_btn = get_icon_view(&["go-home"]).unwrap();
+        return_today_btn.connect_selection_changed(move |e| {
+            e.unselect_all();
+            let date = Local::now().date();
+            self_clone.calendar.set_year(date.year());
+            self_clone.calendar.set_month((date.month() - 1) as i32);
+            self_clone.calendar.set_day(date.day() as i32);
+            self_clone.refresh_marked_day();
+        });
+        return_today_btn.set_margin_start(3);
 
+        panel_box.pack_start(&return_today_btn, false, false, 0);
         panel_box.pack_start(reset_date_icon_view, false, false, 0);
         panel_box.pack_start(reset_date_label, false, false, 0);
         panel_box.pack_start(&gtk::Label::new(None), true, true, 0); // padding
@@ -272,7 +297,7 @@ impl Reminder {
         todo_box.pack_start(&scrolled_window, true, true, 0);
 
         main_box.pack_start(&todo_box, true, true, 0);
-        main_box.pack_start(&calendar, false, true, 0);
+        main_box.pack_start(calendar, false, true, 0);
 
         self.todo_refresh(); // get todo list
         window.add(&main_box);
