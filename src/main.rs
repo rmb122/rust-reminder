@@ -12,7 +12,7 @@ mod utils;
 mod reminder;
 mod models;
 mod schema;
-mod reminder_dialog;
+mod reminder_edit_dialog;
 
 fn main() {
     let application =

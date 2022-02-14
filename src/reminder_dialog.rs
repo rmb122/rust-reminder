@@ -1,9 +1,0 @@
-
-
-struct ReminderDialog {
-
-}
-
-impl ReminderDialog {
-
-}

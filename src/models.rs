@@ -1,34 +1,44 @@
+use std::borrow::Borrow;
 use std::fs::create_dir_all;
 use std::path;
 
-use chrono::NaiveDateTime;
-use diesel::Insertable;
+use chrono::{Date, Local, NaiveDateTime};
 use diesel::prelude::*;
-use diesel::Queryable;
+use crate::schema::todo::{expire_time, id};
 
 use super::schema::todo;
 
 #[derive(Queryable)]
-pub struct Todo<'a> {
+pub struct Todo {
     pub id: i32,
-    pub content: &'a String,
+    pub content: String,
     pub expire_time: Option<NaiveDateTime>,
 }
 
 #[derive(Insertable)]
 #[table_name = "todo"]
-pub struct NewTodo<'a> {
-    pub content: &'a String,
+pub struct NewTodo {
+    pub content: String,
     pub expire_time: Option<NaiveDateTime>,
 }
 
 
-pub fn db_new_todo(conn: &SqliteConnection, todo: &Todo) {
-    let todo_entity = NewTodo {
-        content: todo.content,
-        expire_time: todo.expire_time,
-    };
-    diesel::insert_into(todo::table).values(&todo_entity).execute(conn).expect("Error saving new todo");
+pub fn db_new_todo(conn: &SqliteConnection, t: &NewTodo) {
+    diesel::insert_into(todo::table).values(t).execute(conn).expect("Error saving new todo");
+}
+
+pub fn db_find_todo(conn: &SqliteConnection, date: Option<Date<Local>>) -> Vec<Todo> {
+    match date {
+        Some(date) => {
+            let utc_date_time_start = date.and_hms(0, 0, 0).naive_utc();
+            let utc_date_time_end = date.and_hms(23, 59, 59).naive_utc();
+
+            todo::dsl::todo.filter(expire_time.between(utc_date_time_start, utc_date_time_end)).order_by(expire_time).load::<Todo>(conn).expect("Query error")
+        }
+        None => {
+            todo::dsl::todo.filter(expire_time.is_null()).order_by(id).load::<Todo>(conn).expect("Query error")
+        }
+    }
 }
 
 diesel_migrations::embed_migrations!("migrations/");

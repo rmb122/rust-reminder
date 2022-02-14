@@ -1,15 +1,14 @@
-use gtk::{gdk_pixbuf, glib, IconSize};
+use chrono::{Local, TimeZone};
+use gtk::{gdk_pixbuf, glib, IconSize, pango};
 use gtk::prelude::*;
 
-use crate::models::Todo;
+use crate::models::{NewTodo, Todo};
 
 pub fn get_icon_view(icon_list: &[&str]) -> Option<gtk::IconView> {
-    let icon_view = gtk::IconView::new();
-    icon_view.set_item_padding(5);
-    icon_view.set_columns(icon_list.len() as i32);
-    icon_view.set_column_spacing(0);
-    icon_view.set_selection_mode(gtk::SelectionMode::Single);
-    gtk::prelude::IconViewExt::set_margin(&icon_view, 0);
+    let icon_view = gtk::IconView::builder().
+        item_padding(5).columns(icon_list.len() as i32).
+        column_spacing(0).selection_mode(gtk::SelectionMode::Single).margin(0)
+        .build();
 
     let col_types = [gdk_pixbuf::Pixbuf::static_type()];
     let model = gtk::ListStore::new(&col_types);
@@ -32,16 +31,13 @@ pub fn get_icon_view(icon_list: &[&str]) -> Option<gtk::IconView> {
 }
 
 pub fn get_border_label(label_str: &str, markup: bool) -> gtk::Frame {
-    let label = gtk::Label::new(None);
+    let label = gtk::Label::builder().
+        halign(gtk::Align::Start).margin_start(3).margin_end(3).wrap(true).wrap_mode(pango::WrapMode::WordChar).build();
     if markup {
         label.set_markup(label_str);
     } else {
         label.set_label(label_str);
     }
-    label.set_halign(gtk::Align::Start);
-    label.set_margin_start(3);
-    label.set_margin_end(3);
-    label.set_wrap(true);
 
     let frame = gtk::Frame::new(None);
     frame.set_shadow_type(gtk::ShadowType::Out);
@@ -52,12 +48,12 @@ pub fn get_border_label(label_str: &str, markup: bool) -> gtk::Frame {
 pub fn get_todo_row_view(todo: &Todo) -> gtk::Grid {
     let grid = gtk::Grid::new();
 
-    let label = get_border_label(todo.content, false);
+    let label = get_border_label(&todo.content, false);
     label.set_expand(true);
     grid.attach(&label, 1, 0, 1, 1);
 
     if todo.expire_time.is_some() {
-        let label = get_border_label(&todo.expire_time.unwrap().format("%H:%M:%S").to_string(), false);
+        let label = get_border_label(&Local.from_utc_datetime(&todo.expire_time.unwrap()).format("%H:%M").to_string(), false);
         grid.attach(&label, 2, 0, 1, 1);
     }
     return grid;
