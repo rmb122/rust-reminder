@@ -8,7 +8,7 @@ use diesel::SqliteConnection;
 use gtk::{Application, ApplicationWindow, gdk_pixbuf, glib, IconSize, IconView, ListBox, ListBoxRow};
 use gtk::prelude::*;
 
-use crate::models::{db_find_todo, db_new_todo, establish_connection, NewTodo, Todo};
+use crate::models::{db_del_todo, db_find_todo, db_new_todo, db_update_todo, establish_connection, NewTodo, Todo};
 use crate::reminder_edit_dialog::ReminderEditDialog;
 use crate::utils::{get_border_label, get_icon_view, get_todo_row_view};
 
@@ -110,11 +110,70 @@ impl Reminder {
     }
 
     fn todo_remove_callback(&self) {
-        println!("remove callback");
+        let mut todo_id = Vec::<i32>::new();
+        self.todo_msg_list.selected_foreach(|_, r| unsafe {
+            if let Some(todo) = r.child().unwrap().data::<Todo>("todo") {
+                todo_id.push(todo.as_ref().id);
+
+            }
+        });
+
+        db_del_todo(self.db_conn.deref(), &todo_id);
+        self.todo_refresh();
     }
 
     fn todo_edit_callback(&self) {
-        println!("edit callback");
+        let row = self.todo_msg_list.selected_row();
+        if row.is_none() {
+            return;
+        }
+
+        let row = row.unwrap();
+        let todo = unsafe {
+            if let Some(todo) = row.child().unwrap().data::<Todo>("todo") {
+                Some(todo.as_ref().clone())
+            } else {
+                None
+            }
+        };
+
+        if todo.is_none() {
+            return;
+        }
+        let todo = todo.unwrap();
+
+        let todo_add_dialog = ReminderEditDialog::new("Edit todo", todo.expire_time.is_some());
+        if let Some(time) = todo.expire_time {
+            todo_add_dialog.set_time(Local.from_utc_datetime(&time));
+        }
+
+        todo_add_dialog.set_content(todo.content);
+        todo_add_dialog.show();
+
+        let self_clone = self.clone();
+        todo_add_dialog.connect_hide(move |save_todo, content, time| {
+            if save_todo {
+                let todo = match time {
+                    Some(time) => {
+                        Todo {
+                            id: todo.id,
+                            content: content,
+                            expire_time: Some(time.naive_utc()),
+                        }
+                    }
+                    None => {
+                        Todo {
+                            id: todo.id,
+                            content: content,
+                            expire_time: None,
+                        }
+                    }
+                };
+
+                db_update_todo(self_clone.db_conn.borrow(), &todo);
+                self_clone.todo_refresh()
+            }
+        });
     }
 
     fn todo_refresh(&self) {

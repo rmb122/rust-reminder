@@ -188,6 +188,11 @@ impl ReminderEditDialog {
         };
     }
 
+    pub fn set_content(&self, content: String) {
+        let buffer = gtk::TextBuffer::builder().text(&content).build();
+        self.todo_content_view.set_buffer(Some(&buffer));
+    }
+
     pub fn get_time(&self) -> Option<DateTime<Local>> {
         let todo_timepicker: &Option<Timepicker> = self.todo_timepicker.borrow();
         match todo_timepicker {

@@ -1,5 +1,6 @@
 use chrono::{Local, TimeZone};
 use gtk::{gdk_pixbuf, glib, IconSize, pango};
+use gtk::glib::ffi::GString;
 use gtk::prelude::*;
 
 use crate::models::{NewTodo, Todo};
@@ -55,6 +56,10 @@ pub fn get_todo_row_view(todo: &Todo) -> gtk::Grid {
     if todo.expire_time.is_some() {
         let label = get_border_label(&Local.from_utc_datetime(&todo.expire_time.unwrap()).format("%H:%M").to_string(), false);
         grid.attach(&label, 2, 0, 1, 1);
+    }
+
+    unsafe {
+        grid.set_data("todo", todo.clone());
     }
     return grid;
 }
