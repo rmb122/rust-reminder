@@ -6,7 +6,9 @@ use std::rc::Rc;
 use chrono::{Datelike, DateTime, Local, Timelike, TimeZone};
 use gtk::prelude::*;
 use gtk::Widget;
+use crate::utils::get_days_from_month;
 
+#[derive(Clone)]
 pub struct Timepicker {
     year_picker: gtk::SpinButton,
     month_picker: gtk::SpinButton,
@@ -33,10 +35,6 @@ impl Timepicker {
         let todo_minute_picker = gtk::SpinButton::builder().wrap(true).adjustment(
             &gtk::Adjustment::builder().upper(59f64).lower(0f64).step_increment(1f64).build()
         ).orientation(gtk::Orientation::Vertical).build();
-        todo_minute_picker.connect_output(|x| {
-            x.set_text(&format!("{:02}", x.value()));
-            return gtk::Inhibit(true);
-        });
 
         Timepicker {
             year_picker: todo_year_picker,
@@ -52,6 +50,24 @@ impl Timepicker {
             halign(gtk::Align::Center).spacing(3).margin_start(3).margin_bottom(6).build();
 
         let todo_date_timepicker = gtk::Grid::builder().margin_start(3).build();
+
+        self.minute_picker.connect_output(|x| {
+            x.set_text(&format!("{:02}", x.value()));
+            return gtk::Inhibit(true);
+        });
+
+        let self_clone = self.clone();
+        self.month_picker.connect_output(move |_| {
+            let year = self_clone.year_picker.value();
+            let month = self_clone.month_picker.value();
+            let original_day = self_clone.day_picker.value();
+            let days = get_days_from_month(year as i32, month as u32) as f64;
+            self_clone.day_picker.set_adjustment(
+                &gtk::Adjustment::builder().upper(days).lower(1f64).step_increment(1f64).build()
+            );
+            self_clone.day_picker.set_value(original_day);
+            return gtk::Inhibit(false);
+        });
 
         todo_date_timepicker.attach(&gtk::Label::builder().label("Year").margin_end(6).halign(gtk::Align::End).build(), 0, 0, 1, 1);
         todo_date_timepicker.attach(&self.year_picker, 1, 0, 1, 1);
@@ -92,22 +108,12 @@ impl Timepicker {
     }
 }
 
+#[derive(Clone)]
 pub struct ReminderEditDialog {
     dialog: Rc<gtk::Dialog>,
     todo_content_view: Rc<gtk::TextView>,
     todo_timepicker: Rc<Option<Timepicker>>,
     save_todo: Rc<RefCell<bool>>,
-}
-
-impl Clone for ReminderEditDialog {
-    fn clone(&self) -> Self {
-        ReminderEditDialog {
-            dialog: Rc::clone(&self.dialog),
-            todo_content_view: Rc::clone(&self.todo_content_view),
-            todo_timepicker: Rc::clone(&self.todo_timepicker),
-            save_todo: Rc::clone(&self.save_todo),
-        }
-    }
 }
 
 impl ReminderEditDialog {

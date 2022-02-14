@@ -40,6 +40,7 @@ impl ResetDateButton {
     }
 }
 
+#[derive(Clone)]
 pub struct Reminder {
     db_conn: Rc<SqliteConnection>,
     calendar: Rc<gtk::Calendar>,
@@ -47,19 +48,6 @@ pub struct Reminder {
     todo_msg_list: Rc<gtk::ListBox>,
     current_date: Rc<RefCell<Option<Date<Local>>>>,
     reset_date_btn: Rc<ResetDateButton>,
-}
-
-impl Clone for Reminder {
-    fn clone(&self) -> Self {
-        return Reminder {
-            db_conn: Rc::clone(&self.db_conn),
-            calendar: Rc::clone(&self.calendar),
-            todo_edit_panel_button: self.todo_edit_panel_button.clone(),
-            todo_msg_list: Rc::clone(&self.todo_msg_list),
-            current_date: Rc::clone(&self.current_date),
-            reset_date_btn: Rc::clone(&self.reset_date_btn),
-        };
-    }
 }
 
 impl Reminder {

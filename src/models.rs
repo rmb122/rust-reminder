@@ -6,21 +6,11 @@ use diesel::prelude::*;
 
 use super::schema::todo;
 
-#[derive(Queryable)]
+#[derive(Queryable, Clone)]
 pub struct Todo {
     pub id: i32,
     pub content: String,
     pub expire_time: Option<NaiveDateTime>,
-}
-
-impl Clone for Todo {
-    fn clone(&self) -> Self {
-        Todo {
-            id: self.id.clone(),
-            content: self.content.clone(),
-            expire_time: self.expire_time.clone(),
-        }
-    }
 }
 
 #[derive(Insertable)]
