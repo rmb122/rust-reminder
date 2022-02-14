@@ -13,11 +13,6 @@ pub struct Todo {
     pub expire_time: Option<NaiveDateTime>,
 }
 
-#[derive(Queryable)]
-pub struct Day {
-    pub day: i32,
-}
-
 impl Clone for Todo {
     fn clone(&self) -> Self {
         Todo {
