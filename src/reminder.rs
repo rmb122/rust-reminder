@@ -280,7 +280,6 @@ impl Reminder {
             }
             e.unselect_all();
         });
-        return_today_btn.set_margin_start(3);
 
         panel_box.pack_start(&return_today_btn, false, false, 0);
         panel_box.pack_start(reset_date_icon_view, false, false, 0);
