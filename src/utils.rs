@@ -26,6 +26,7 @@ pub fn get_icon_view(icon_list: &[&str]) -> Option<gtk::IconView> {
 
     icon_view.set_model(Some(&model));
     icon_view.set_pixbuf_column(0);
+    icon_view.set_activate_on_single_click(true);
 
     Some(icon_view)
 }

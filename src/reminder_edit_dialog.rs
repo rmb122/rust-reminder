@@ -6,6 +6,7 @@ use std::rc::Rc;
 use chrono::{Datelike, DateTime, Local, Timelike, TimeZone};
 use gtk::prelude::*;
 use gtk::Widget;
+
 use crate::utils::get_days_from_month;
 
 #[derive(Clone)]
@@ -65,7 +66,7 @@ impl Timepicker {
             self_clone.day_picker.set_adjustment(
                 &gtk::Adjustment::builder().upper(days).lower(1f64).step_increment(1f64).build()
             );
-            self_clone.day_picker.set_value(original_day);
+            self_clone.day_picker.set_value(original_day); // adjustment 会帮我们做 check, 不用再 check 一遍直接设置即可
             return gtk::Inhibit(false);
         });
 

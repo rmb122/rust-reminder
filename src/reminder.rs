@@ -227,12 +227,9 @@ impl Reminder {
 
         // glib::clone! break type hinting, just do it myself...
         let self_clone = self.clone();
-        todo_edit_panel.connect_selection_changed(move |e| {
-            let items = e.selected_items();
-            for item in items.iter() {
-                assert_eq!(item.indices().len(), 1);
-                (self_clone.todo_edit_panel_button[item.indices()[0] as usize].1)(&self_clone);
-            }
+        todo_edit_panel.connect_item_activated(move |e, path| {
+            assert_eq!(path.indices().len(), 1);
+            (self_clone.todo_edit_panel_button[path.indices()[0] as usize].1)(&self_clone);
             e.unselect_all();
         });
 
@@ -256,22 +253,32 @@ impl Reminder {
         let reset_date_label = &reset_date_btn.current_date_label;
 
         let self_clone = self.clone();
-        reset_date_icon_view.connect_selection_changed(move |e| {
-            e.unselect_all();
+        reset_date_icon_view.connect_item_activated(move |e, _| {
             self_clone.reset_date();
             self_clone.reset_date_btn.hide();
             self_clone.todo_refresh();
+            e.unselect_all();
         });
 
         let self_clone = self.clone();
         let return_today_btn = get_icon_view(&["go-home"]).unwrap();
-        return_today_btn.connect_selection_changed(move |e| {
+        return_today_btn.connect_item_activated(move |e, _| {
+            let have_current_date = self_clone.current_date.deref().borrow().is_some();
+            if have_current_date {
+                let current_date = self_clone.current_date.deref().borrow().unwrap();
+                let today_date = Local::now().date();
+
+                if current_date == today_date {  // 如果当前选中的已经是今天, 回到没有选择日期的状态
+                    self_clone.reset_date();
+                    self_clone.reset_date_btn.hide();
+                    self_clone.todo_refresh();
+                } else {
+                    self_clone.calendar.set_year(today_date.year());
+                    self_clone.calendar.set_month((today_date.month() - 1) as i32);
+                    self_clone.calendar.set_day(today_date.day() as i32);
+                }
+            }
             e.unselect_all();
-            let date = Local::now().date();
-            self_clone.calendar.set_year(date.year());
-            self_clone.calendar.set_month((date.month() - 1) as i32);
-            self_clone.calendar.set_day(date.day() as i32);
-            self_clone.refresh_marked_day();
         });
         return_today_btn.set_margin_start(3);
 

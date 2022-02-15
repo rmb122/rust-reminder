@@ -1,5 +1,5 @@
-use std::fs::create_dir_all;
 use std::path;
+use std::fs::create_dir_all;
 
 use chrono::{Date, Local, NaiveDateTime, TimeZone};
 use diesel::prelude::*;
